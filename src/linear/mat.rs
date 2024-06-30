@@ -1,5 +1,13 @@
 use super::vec::*;
 
+macro_rules! assert_near_eq {
+    ($x: expr, $y: expr, $delta: expr) => {
+        for (xv, yv) in $x.as_array().iter().zip($y.as_array().iter()) {
+            assert!((xv - yv).abs() < $delta, "{:?} != {:?}", xv, yv);
+        }
+    }
+}
+
 #[cfg_attr(rustfmt, rustfmt_skip)]
 macro_rules! tranpose_mat {
     ($mat: ident, Vec2f) => {
@@ -517,7 +525,8 @@ impl Mat4f {
         matrix[3][3] =   a * fk_jg - b * ek_ig + c * ej_if;
 
 
-        matrix /= det;
+        let denom = 1.0 / det;
+        matrix *= denom;
 
         matrix
     }
@@ -525,11 +534,12 @@ impl Mat4f {
     pub fn perspective(aspect_ratio: f32, fov_rad: f32, near: f32, far: f32) -> Self {
         let a = aspect_ratio;
         let f = 1.0 / (fov_rad / 2.0).tan();
+        let inv_fn = 1.0 / (far - near);
 
         // transformed Z, Zt = (g * Z + h) / Z
         // division by Z occurs in graphics pipeline
-        let g =       -(far + near) / (far - near);
-        let h = -(2.0 * far * near) / (far - near);
+        let g =       -(far + near) * inv_fn;
+        let h = -(2.0 * far * near) * inv_fn;
 
         let mut matrix = Mat4f::ZERO;
         
@@ -547,20 +557,23 @@ impl Mat4f {
         let w = size;
         let h = w ;
 
-        let r =  w / 2.0;
+        let r =  w * 0.5;
         let l = -r;
-        let t =  h / 2.0;
+        let t =  h * 0.5;
         let b = -t;
         
+        let inv_rl = 1.0 / (r - l);
+        let inv_tb = 1.0 / (t - b);
+        let inv_fn = 1.0 / (far - near);
 
         let mut matrix = Mat4f::IDENTITY;
         
-        matrix[0][0] =           2.0 / (r - l);
-        matrix[3][0] =      -(r + l) / (r - l);
-        matrix[1][1] =           2.0 / (t - b);
-        matrix[3][1] =      -(t + b) / (t - b);
-        matrix[2][2] =          -2.0 / (far - near);
-        matrix[3][2] = -(far + near) / (far - near);
+        matrix[0][0] =           2.0 * inv_rl;
+        matrix[3][0] =      -(r + l) * inv_rl;
+        matrix[1][1] =           2.0 * inv_tb;
+        matrix[3][1] =      -(t + b) * inv_tb;
+        matrix[2][2] =          -2.0 * inv_fn;
+        matrix[3][2] = -(far + near) * inv_fn;
 
         matrix
     }
@@ -836,7 +849,7 @@ mod tests {
         let a = Mat4f::new([
             1.0, 2.0, 3.0, 4.0, 0.0, 4.0, 5.0, 6.0, 1.0, 0.0, 6.0, 7.0, 1.0, 2.0, 0.0, 8.0,
         ]);
-        assert_eq!(
+        assert_near_eq!(
             a.inverse(),
             Mat4f::new([
                 19.0 / 16.0,
@@ -855,13 +868,14 @@ mod tests {
                 3.0 / 80.0,
                 3.0 / 40.0,
                 11.0 / 80.0
-            ])
+            ]),
+            0.000001
         );
 
         let b = Mat4f::new([
             18.0, 7.0, 1.0, 18.0, 2.0, 3.0, 4.0, 1.0, 6.0, 7.0, 13.0, 2.0, 3.0, 7.0, 5.0, 9.0,
         ]);
-        assert_eq!(
+        assert_near_eq!(
             b.inverse(),
             Mat4f::new([
                 69.0 / 1144.0,
@@ -880,7 +894,9 @@ mod tests {
                 -21.0 / 26.0,
                 215.0 / 1144.0,
                 45.0 / 286.0
-            ])
+            ]),
+            0.000001
+            
         );
     }
 }

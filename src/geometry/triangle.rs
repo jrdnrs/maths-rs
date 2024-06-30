@@ -14,23 +14,27 @@ impl Triangle {
         Self { a, b, c }
     }
 
-    pub fn barycentric_from_inv_area(&self, point: Vec2f, inv_area: f32) -> Vec3f {
-        let area_bcp = Triangle::new(self.b, self.c, point).area();
-        let area_acp = Triangle::new(self.a, self.c, point).area();
-        let area_abp = Triangle::new(self.a, self.b, point).area();
+    /// Returns barycentric coordinates (U, V, W) of the point with respect to this triangle.
+    ///
+    /// This makes use of the provided `inv_para_area` that represents the inverse of the
+    /// parallelogram area of the triangle, thus avoiding a division.
+    pub fn barycentric_from_inv_area(&self, point: Vec2f, inv_para_area: f32) -> Vec3f {
+        let bcp = Segment::new(self.b, self.c).edge_side(point);
+        let acp = Segment::new(self.a, self.c).edge_side(point);
+        let abp = Segment::new(self.a, self.b).edge_side(point);
 
-        let u = area_bcp * inv_area;
-        let v = area_acp * inv_area;
-        let w = area_abp * inv_area;
+        let u = bcp * inv_para_area;
+        let v = acp * inv_para_area;
+        let w = abp * inv_para_area;
 
         return Vec3f::new(u, v, w);
     }
 
+    /// Returns barycentric coordinates (U, V, W) of the point with respect to this triangle.
     pub fn barycentric(&self, point: Vec2f) -> Vec3f {
-        let area = self.area();
-        let inv_area = 1.0 / area;
+        let inv_para_area = 1.0 / Segment::new(self.b, self.a).edge_side(self.c);
 
-        return self.barycentric_from_inv_area(point, inv_area);
+        return self.barycentric_from_inv_area(point, inv_para_area);
     }
 }
 
@@ -80,8 +84,9 @@ impl Shape2D for Triangle {
     }
 
     fn centre(&self) -> Vec2f {
-        let x = (self.a.x + self.b.x + self.c.x) / 3.0;
-        let y = (self.a.y + self.b.y + self.c.y) / 3.0;
+        const THIRD: f32 = 1.0 / 3.0;
+        let x = (self.a.x + self.b.x + self.c.x) * THIRD;
+        let y = (self.a.y + self.b.y + self.c.y) * THIRD;
 
         return Vec2f::new(x, y);
     }

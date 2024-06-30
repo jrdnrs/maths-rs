@@ -18,6 +18,12 @@ impl Segment {
         Self { a, b }
     }
 
+    /// Effectively returns double the signed area (parallelogram) of the triangle formed by the
+    /// segment and the point. The sign of the result indicates the side of the segment the point
+    /// is on (winding order).
+    ///
+    /// A positive result indicates a clockwise winding order, and a negative result indicates an
+    /// anti-clockwise winding order.
     pub fn edge_side(&self, point: Vec2f) -> f32 {
         let edge = self.b - self.a;
         let point = point - self.a;
@@ -25,6 +31,7 @@ impl Segment {
         return point.cross(edge);
     }
 
+    /// Returns the intersection point of two segments, if they intersect.
     pub fn intersection(&self, other: &Segment) -> Option<Vec2f> {
         let edge_1 = self.b - self.a;
         let edge_2 = other.b - other.a;
@@ -48,6 +55,7 @@ impl Segment {
         return None;
     }
 
+    /// Returns whether two segments intersect.
     pub fn intersects(&self, other: &Segment) -> bool {
         let edge_1 = self.b - self.a;
         let edge_2 = other.b - other.a;
@@ -68,6 +76,7 @@ impl Segment {
         return t >= 0.0 && t <= 1.0 && u >= 0.0 && u <= 1.0;
     }
 
+    /// Returns whether the segment overlaps with the area of an axis-aligned bounding box.
     pub fn overlaps_bounds(&self, bounds: &AABB) -> bool {
         // If either point is inside the bounds, then it intersects or is inside completely
         if bounds.contains_point(self.a) || bounds.contains_point(self.b) {
@@ -98,6 +107,7 @@ impl Segment {
         return false;
     }
 
+    /// Returns whether the segment overlaps with the area of a polygon.
     pub fn overlaps_polygon(&self, polygon: &Polygon) -> bool {
         // If both points are outside the bounds on the same side, then the segment cannot intersect.
         // This acts as an early out for the more expensive checks (not sure of the performance gain though)
@@ -194,6 +204,7 @@ impl Segment {
         return Segment::new(points[0], points[1]);
     }
 
+    /// Returns squared shortest distance from the segment to the point.
     pub fn point_distance_sq(&self, point: Vec2f) -> f32 {
         let ab = self.b - self.a;
         let ap = point - self.a;
@@ -215,6 +226,7 @@ impl Segment {
         }
     }
 
+    /// Returns shortest distance from the segment to the point
     pub fn point_distance(&self, point: Vec2f) -> f32 {
         return self.point_distance_sq(point).sqrt();
     }
