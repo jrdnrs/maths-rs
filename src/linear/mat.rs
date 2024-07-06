@@ -5,7 +5,7 @@ macro_rules! assert_near_eq {
         for (xv, yv) in $x.as_array().iter().zip($y.as_array().iter()) {
             assert!((xv - yv).abs() < $delta, "{:?} != {:?}", xv, yv);
         }
-    }
+    };
 }
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
@@ -338,6 +338,11 @@ macro_rules! impl_core_mat {
                 matrix
             }
         }
+
+        #[cfg(feature = "bytemuck")]
+        unsafe impl bytemuck::Zeroable for $name {}
+        #[cfg(feature = "bytemuck")]
+        unsafe impl bytemuck::Pod for $name {}
     };
 }
 
@@ -437,8 +442,6 @@ impl Mat3f {
         return matrix;
     }
 }
-
-
 
 def_mat! { Mat4f, Vec4f, 4 }
 impl_core_mat! { Mat4f, Vec4f, 4 }
@@ -896,7 +899,6 @@ mod tests {
                 45.0 / 286.0
             ]),
             0.000001
-            
         );
     }
 }

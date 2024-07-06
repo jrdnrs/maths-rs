@@ -274,7 +274,10 @@ macro_rules! impl_core_vec {
             }
         }
 
-
+        #[cfg(feature = "bytemuck")]
+        unsafe impl bytemuck::Zeroable for $name {}
+        #[cfg(feature = "bytemuck")]
+        unsafe impl bytemuck::Pod for $name {}
     };
 }
 
