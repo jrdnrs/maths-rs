@@ -1,4 +1,43 @@
+use std::ops::{
+    Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,
+};
+
 use super::vec::*;
+
+pub trait Matrix:
+    Index<usize, Output = Self::Column>
+    + IndexMut<usize, Output = Self::Column>
+    + Add<Output = Self>
+    + Add<f32, Output = Self>
+    + AddAssign
+    + AddAssign<f32>
+    + Sub<Output = Self>
+    + Sub<f32, Output = Self>
+    + SubAssign
+    + SubAssign<f32>
+    + Mul<Output = Self>
+    + Mul<f32, Output = Self>
+    + MulAssign
+    + MulAssign<f32>
+    + Div<f32, Output = Self>
+    + DivAssign<f32>
+    + Neg<Output = Self>
+    + Sized
+    + Copy
+    + Clone
+    + Default
+    + PartialEq
+{
+    type Column;
+    const ELEMENTS: usize;
+    const ZERO: Self;
+    const IDENTITY: Self;
+    fn uniform(a: f32) -> Self;
+    fn transpose(&self) -> Self;
+    fn sqrt(&self) -> Self;
+    fn abs(&self) -> Self;
+    fn recip(&self) -> Self;
+}
 
 macro_rules! assert_near_eq {
     ($x: expr, $y: expr, $delta: expr) => {
@@ -40,7 +79,7 @@ macro_rules! def_mat {
         #[repr(C)]
         #[derive(Debug, Default, Clone, Copy, PartialEq)]
         pub struct $name {
-            array: [f32; $dim * $dim],
+            array: [f32; Self::ELEMENTS],
         }
     };
 }
@@ -48,8 +87,10 @@ macro_rules! def_mat {
 macro_rules! impl_core_mat {
     ( $name: ident, $vec: ident, $dim: expr ) => {
         impl $name {
+            pub const ELEMENTS: usize = $dim * $dim;
+
             pub const ZERO: Self = Self {
-                array: [0.0; $dim * $dim],
+                array: [0.0; Self::ELEMENTS],
             };
 
             pub const IDENTITY: Self = {
@@ -62,7 +103,7 @@ macro_rules! impl_core_mat {
                 mat
             };
 
-            pub fn new(a: [f32; $dim * $dim]) -> Self {
+            pub fn new(a: [f32; Self::ELEMENTS]) -> Self {
                 Self { array: a }
             }
 
@@ -78,7 +119,7 @@ macro_rules! impl_core_mat {
 
             pub fn uniform(a: f32) -> Self {
                 Self {
-                    array: [a; $dim * $dim],
+                    array: [a; Self::ELEMENTS],
                 }
             }
 
@@ -91,7 +132,7 @@ macro_rules! impl_core_mat {
             pub fn sqrt(&self) -> Self {
                 let mut matrix = Self::ZERO;
 
-                for i in 0..($dim * $dim) {
+                for i in 0..(Self::ELEMENTS) {
                     matrix.array[i] = self.array[i].sqrt();
                 }
 
@@ -101,7 +142,7 @@ macro_rules! impl_core_mat {
             pub fn abs(&self) -> Self {
                 let mut matrix = Self::ZERO;
 
-                for i in 0..($dim * $dim) {
+                for i in 0..(Self::ELEMENTS) {
                     matrix.array[i] = self.array[i].abs();
                 }
 
@@ -111,7 +152,7 @@ macro_rules! impl_core_mat {
             pub fn recip(&self) -> Self {
                 let mut matrix = Self::ZERO;
 
-                for i in 0..($dim * $dim) {
+                for i in 0..(Self::ELEMENTS) {
                     matrix.array[i] = if self.array[i] == 0.0 {
                         0.0
                     } else {
@@ -122,11 +163,11 @@ macro_rules! impl_core_mat {
                 matrix
             }
 
-            pub fn as_array(&self) -> &[f32; $dim * $dim] {
+            pub fn as_array(&self) -> &[f32; Self::ELEMENTS] {
                 &self.array
             }
 
-            pub fn as_mut_array(&mut self) -> &mut [f32; $dim * $dim] {
+            pub fn as_mut_array(&mut self) -> &mut [f32; Self::ELEMENTS] {
                 &mut self.array
             }
 
@@ -136,6 +177,34 @@ macro_rules! impl_core_mat {
 
             pub fn as_mut_columns(&mut self) -> &mut [$vec; $dim] {
                 unsafe { core::mem::transmute(&mut self.array) }
+            }
+        }
+
+        impl Matrix for $name {
+            type Column = $vec;
+
+            const ELEMENTS: usize = Self::ELEMENTS;
+            const ZERO: Self = Self::ZERO;
+            const IDENTITY: Self = Self::IDENTITY;
+
+            fn uniform(a: f32) -> Self {
+                Self::uniform(a)
+            }
+
+            fn transpose(&self) -> Self {
+                self.transpose()
+            }
+
+            fn sqrt(&self) -> Self {
+                self.sqrt()
+            }
+
+            fn abs(&self) -> Self {
+                self.abs()
+            }
+
+            fn recip(&self) -> Self {
+                self.recip()
             }
         }
 
@@ -159,7 +228,7 @@ macro_rules! impl_core_mat {
             fn add(self, rhs: Self) -> Self::Output {
                 let mut matrix = Self::ZERO;
 
-                for i in 0..($dim * $dim) {
+                for i in 0..(Self::ELEMENTS) {
                     matrix.array[i] = self.array[i] + rhs.array[i];
                 }
 
@@ -169,7 +238,7 @@ macro_rules! impl_core_mat {
 
         impl std::ops::AddAssign for $name {
             fn add_assign(&mut self, rhs: Self) {
-                for i in 0..($dim * $dim) {
+                for i in 0..(Self::ELEMENTS) {
                     self.array[i] += rhs.array[i];
                 }
             }
@@ -181,7 +250,7 @@ macro_rules! impl_core_mat {
             fn add(self, rhs: f32) -> Self::Output {
                 let mut matrix = Self::ZERO;
 
-                for i in 0..($dim * $dim) {
+                for i in 0..(Self::ELEMENTS) {
                     matrix.array[i] = self.array[i] + rhs;
                 }
 
@@ -191,7 +260,7 @@ macro_rules! impl_core_mat {
 
         impl std::ops::AddAssign<f32> for $name {
             fn add_assign(&mut self, rhs: f32) {
-                for i in 0..($dim * $dim) {
+                for i in 0..(Self::ELEMENTS) {
                     self.array[i] += rhs;
                 }
             }
@@ -203,7 +272,7 @@ macro_rules! impl_core_mat {
             fn sub(self, rhs: Self) -> Self::Output {
                 let mut matrix = Self::ZERO;
 
-                for i in 0..($dim * $dim) {
+                for i in 0..(Self::ELEMENTS) {
                     matrix.array[i] = self.array[i] - rhs.array[i];
                 }
 
@@ -213,7 +282,7 @@ macro_rules! impl_core_mat {
 
         impl std::ops::SubAssign for $name {
             fn sub_assign(&mut self, rhs: Self) {
-                for i in 0..($dim * $dim) {
+                for i in 0..(Self::ELEMENTS) {
                     self.array[i] -= rhs.array[i];
                 }
             }
@@ -225,7 +294,7 @@ macro_rules! impl_core_mat {
             fn sub(self, rhs: f32) -> Self::Output {
                 let mut matrix = Self::ZERO;
 
-                for i in 0..($dim * $dim) {
+                for i in 0..(Self::ELEMENTS) {
                     matrix.array[i] = self.array[i] - rhs;
                 }
 
@@ -235,7 +304,7 @@ macro_rules! impl_core_mat {
 
         impl std::ops::SubAssign<f32> for $name {
             fn sub_assign(&mut self, rhs: f32) {
-                for i in 0..($dim * $dim) {
+                for i in 0..(Self::ELEMENTS) {
                     self.array[i] -= rhs;
                 }
             }
@@ -271,7 +340,7 @@ macro_rules! impl_core_mat {
             fn mul(self, rhs: f32) -> Self::Output {
                 let mut matrix = Self::ZERO;
 
-                for i in 0..($dim * $dim) {
+                for i in 0..(Self::ELEMENTS) {
                     matrix.array[i] = self.array[i] * rhs;
                 }
 
@@ -281,7 +350,7 @@ macro_rules! impl_core_mat {
 
         impl std::ops::MulAssign<f32> for $name {
             fn mul_assign(&mut self, rhs: f32) {
-                for i in 0..($dim * $dim) {
+                for i in 0..(Self::ELEMENTS) {
                     self.array[i] *= rhs;
                 }
             }
@@ -309,7 +378,7 @@ macro_rules! impl_core_mat {
             fn div(self, rhs: f32) -> Self::Output {
                 let mut matrix = Self::ZERO;
 
-                for i in 0..($dim * $dim) {
+                for i in 0..(Self::ELEMENTS) {
                     matrix.array[i] = self.array[i] / rhs;
                 }
 
@@ -319,7 +388,7 @@ macro_rules! impl_core_mat {
 
         impl std::ops::DivAssign<f32> for $name {
             fn div_assign(&mut self, rhs: f32) {
-                for i in 0..($dim * $dim) {
+                for i in 0..(Self::ELEMENTS) {
                     self.array[i] /= rhs;
                 }
             }
@@ -331,7 +400,7 @@ macro_rules! impl_core_mat {
             fn neg(self) -> Self::Output {
                 let mut matrix = Self::ZERO;
 
-                for i in 0..($dim * $dim) {
+                for i in 0..(Self::ELEMENTS) {
                     matrix.array[i] = -self.array[i];
                 }
 
@@ -534,28 +603,61 @@ impl Mat4f {
         matrix
     }
 
-    pub fn perspective(aspect_ratio: f32, fov_rad: f32, near: f32, far: f32) -> Self {
+    /// Create a (left-handed) perspective projection matrix for DirectX, where:
+    /// - X is right
+    /// - Y is up
+    /// - Z is forward
+    /// 
+    /// NDC: [-1, 1] for x and y, [0, 1] for z
+    pub fn perspective_directx(aspect_ratio: f32, fov_rad: f32, near: f32, far: f32) -> Self {
         let a = aspect_ratio;
         let f = 1.0 / (fov_rad / 2.0).tan();
         let inv_fn = 1.0 / (far - near);
 
         // transformed Z, Zt = (g * Z + h) / Z
         // division by Z occurs in graphics pipeline
-        let g =       -(far + near) * inv_fn;
-        let h = -(2.0 * far * near) * inv_fn;
+        let g =           far * inv_fn;
+        let h = -(far * near) * inv_fn;
 
         let mut matrix = Mat4f::ZERO;
         
         matrix[0][0] = f / a;
-        matrix[1][1] = f;
+        matrix[1][1] = -f;
         matrix[2][2] = g;
         matrix[3][2] = h;
-        matrix[2][3] = -1.0;
+        matrix[2][3] = 1.0;
 
         matrix
     }
 
-    pub fn orthographic(size: f32, near: f32, far: f32) -> Self {
+    /// Creates a (left-handed) perspective projection matrix for OpenGL, where:
+    /// - X is right
+    /// - Y is up
+    /// - Z is forward
+    /// 
+    /// NDC: [-1, 1]
+    pub fn perspective_opengl(aspect_ratio: f32, fov_rad: f32, near: f32, far: f32) -> Self {
+        let a = aspect_ratio;
+        let f = 1.0 / (fov_rad / 2.0).tan();
+        let inv_fn = 1.0 / (far - near);
+
+        // transformed Z, Zt = (g * Z + h) / Z
+        // division by Z occurs in graphics pipeline
+        let g =      -(far + near) * inv_fn;
+        let h = (2.0 * far * near) * inv_fn;
+
+        let mut matrix = Mat4f::ZERO;
+        
+        matrix[0][0] = f / a;
+        matrix[1][1] = -f;
+        matrix[2][2] = g;
+        matrix[3][2] = h;
+        matrix[2][3] = 1.0;
+
+        matrix
+    }
+
+    pub fn orthographic_opengl(size: f32, near: f32, far: f32) -> Self {
         // let a = aspect_ratio;
         let w = size;
         let h = w ;

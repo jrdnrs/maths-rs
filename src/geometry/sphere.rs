@@ -28,7 +28,7 @@ impl Sphere {
     }
 }
 
-impl Shape for Sphere {
+impl Shape<Vec3f> for Sphere {
     fn contains_point(&self, point: Vec3f) -> bool {
         let displacement = self.centre - point;
         let distance_sq = displacement.dot(displacement);
@@ -36,11 +36,11 @@ impl Shape for Sphere {
         distance_sq <= self.radius * self.radius
     }
 
-    fn intersects_ray(&self, ray: &Segment) -> bool {
+    fn intersects_ray(&self, ray: &Segment<Vec3f>) -> bool {
         todo!()
     }
 
-    fn extents(&self) -> AABB {
+    fn extents(&self) -> AABB<Vec3f> {
         AABB::new(
             self.centre - Vec3f::uniform(self.radius),
             self.centre + Vec3f::uniform(self.radius),
@@ -58,6 +58,25 @@ impl Shape for Sphere {
     fn centre(&self) -> Vec3f {
         self.centre
     }
+    
+    fn translate(&mut self, translation: Vec3f) {
+        self.centre += translation;
+    }
+    
+    fn rotate(&mut self, rotation: Vec3f) {
+        todo!()
+    }
+    
+    fn scale(&mut self, scale: Vec3f) {
+        self.centre *= scale;
+        self.radius *= scale.x.max(scale.y).max(scale.z);
+    }
+    
+    fn points(&self) -> &[Vec3f] {
+        unimplemented!("A circle does not have points");
+    }
+
+    
 }
 
 mod tests {

@@ -1,47 +1,53 @@
-use crate::linear::Vec2f;
+use crate::linear::{Vec2f, Vec3f, Vector};
 
-use super::{shape::Shape2D, Segment};
+use super::{segment::Segment, shape::Shape};
 
 #[derive(Debug, Clone, Copy)]
-pub struct AABB {
-    pub min: Vec2f,
-    pub max: Vec2f,
+pub struct AABB<T: Vector> {
+    pub min: T,
+    pub max: T,
 }
 
-impl AABB {
-    pub fn new(min: Vec2f, max: Vec2f) -> Self {
+impl<T: Vector> AABB<T> {
+    pub fn new(min: T, max: T) -> Self {
         Self { min, max }
     }
 
-    pub fn from_dimensions(centre: Vec2f, dimensions: Vec2f) -> Self {
+    pub fn from_dimensions(centre: T, dimensions: T) -> Self {
         let half_dimensions = dimensions * 0.5;
-        return Self::new(centre - half_dimensions, centre + half_dimensions);
-    }
-
-    pub fn intersects(&self, other: &AABB) -> bool {
-        return self.min.x <= other.max.x
-            && self.max.x >= other.min.x
-            && self.min.y <= other.max.y
-            && self.max.y >= other.min.y;
-    }
-
-    pub fn contains(&self, other: &AABB) -> bool {
-        return self.min.x <= other.min.x
-            && self.max.x >= other.max.x
-            && self.min.y <= other.min.y
-            && self.max.y >= other.max.y;
+        Self::new(centre - half_dimensions, centre + half_dimensions)
     }
 }
 
-impl Shape2D for AABB {
-    fn contains_point(&self, point: Vec2f) -> bool {
-        return point.x >= self.min.x
-            && point.x <= self.max.x
-            && point.y >= self.min.y
-            && point.y <= self.max.y;
+/*
+    2D
+*/
+
+impl AABB<Vec2f> {
+    pub fn intersects(&self, other: &AABB<Vec2f>) -> bool {
+        self.min.x <= other.max.x
+            && self.max.x >= other.min.x
+            && self.min.y <= other.max.y
+            && self.max.y >= other.min.y
     }
 
-    fn intersects_ray(&self, ray: &Segment) -> bool {
+    pub fn contains(&self, other: &AABB<Vec2f>) -> bool {
+        self.min.x <= other.min.x
+            && self.max.x >= other.max.x
+            && self.min.y <= other.min.y
+            && self.max.y >= other.max.y
+    }
+}
+
+impl Shape<Vec2f> for AABB<Vec2f> {
+    fn contains_point(&self, point: Vec2f) -> bool {
+        point.x >= self.min.x
+            && point.x <= self.max.x
+            && point.y >= self.min.y
+            && point.y <= self.max.y
+    }
+
+    fn intersects_ray(&self, ray: &Segment<Vec2f>) -> bool {
         let e1 = Segment::new(
             Vec2f::new(self.min.x, self.min.y),
             Vec2f::new(self.max.x, self.min.y),
@@ -70,19 +76,23 @@ impl Shape2D for AABB {
             Vec2f::new(self.min.x, self.max.y),
             Vec2f::new(self.min.x, self.min.y),
         );
-        return ray.intersects_ray(&e4);
+        ray.intersects_ray(&e4)
     }
 
-    fn extents(&self) -> AABB {
-        return *self;
+    fn extents(&self) -> AABB<Vec2f> {
+        self.clone()
     }
 
-    fn area(&self) -> f32 {
-        return (self.max.x - self.min.x) * (self.max.y - self.min.y);
+    fn volume(&self) -> f32 {
+        (self.max.x - self.min.x) * (self.max.y - self.min.y)
+    }
+
+    fn furthest_point(&self, direction: Vec2f) -> Vec2f {
+        todo!()
     }
 
     fn centre(&self) -> Vec2f {
-        return (self.min + self.max) * 0.5;
+        (self.min + self.max) * 0.5
     }
 
     fn translate(&mut self, translation: Vec2f) {
@@ -95,12 +105,84 @@ impl Shape2D for AABB {
         self.max *= scale;
     }
 
-    fn rotate(&mut self, _sin: f32, _cos: f32) {
-        // TODO: Maybe this should just do nothing?
+    fn rotate(&mut self, rotation: Vec2f) {
         unimplemented!("AABB cannot be rotated")
     }
 
     fn points(&self) -> &[Vec2f] {
+        unimplemented!("AABB does not have points")
+    }
+}
+
+/*
+    3D
+*/
+
+impl AABB<Vec3f> {
+    pub fn intersects(&self, other: &AABB<Vec3f>) -> bool {
+        self.min.x <= other.max.x
+            && self.max.x >= other.min.x
+            && self.min.y <= other.max.y
+            && self.max.y >= other.min.y
+            && self.min.z <= other.max.z
+            && self.max.z >= other.min.z
+    }
+
+    pub fn contains(&self, other: &AABB<Vec3f>) -> bool {
+        self.min.x <= other.min.x
+            && self.max.x >= other.max.x
+            && self.min.y <= other.min.y
+            && self.max.y >= other.max.y
+            && self.min.z <= other.min.z
+            && self.max.z >= other.max.z
+    }
+}
+
+impl Shape<Vec3f> for AABB<Vec3f> {
+    fn contains_point(&self, point: Vec3f) -> bool {
+        point.x >= self.min.x
+            && point.x <= self.max.x
+            && point.y >= self.min.y
+            && point.y <= self.max.y
+            && point.z >= self.min.z
+            && point.z <= self.max.z
+    }
+
+    fn intersects_ray(&self, ray: &Segment<Vec3f>) -> bool {
+        todo!()
+    }
+
+    fn extents(&self) -> AABB<Vec3f> {
+        self.clone()
+    }
+
+    fn volume(&self) -> f32 {
+        (self.max.x - self.min.x) * (self.max.y - self.min.y) * (self.max.z - self.min.z)
+    }
+
+    fn furthest_point(&self, direction: Vec3f) -> Vec3f {
+        todo!()
+    }
+
+    fn centre(&self) -> Vec3f {
+        (self.min + self.max) * 0.5
+    }
+
+    fn translate(&mut self, translation: Vec3f) {
+        self.min += translation;
+        self.max += translation;
+    }
+
+    fn scale(&mut self, scale: Vec3f) {
+        self.min *= scale;
+        self.max *= scale;
+    }
+
+    fn rotate(&mut self, rotation: Vec3f) {
+        unimplemented!("AABB cannot be rotated")
+    }
+
+    fn points(&self) -> &[Vec3f] {
         unimplemented!("AABB does not have points")
     }
 }
@@ -149,7 +231,7 @@ mod tests {
     fn area_test() {
         let aabb = AABB::new(Vec2f::new(0.0, 0.0), Vec2f::new(10.0, 10.0));
 
-        assert_eq!(aabb.area(), 100.0);
+        assert_eq!(aabb.volume(), 100.0);
     }
 
     #[test]

@@ -1,3 +1,46 @@
+use std::ops::{
+    Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,
+};
+
+pub trait Vector:
+    Index<usize, Output = f32>
+    + IndexMut<usize, Output = f32>
+    + Add<Output = Self>
+    + Add<f32, Output = Self>
+    + AddAssign
+    + AddAssign<f32>
+    + Sub<Output = Self>
+    + Sub<f32, Output = Self>
+    + SubAssign
+    + SubAssign<f32>
+    + Mul<Output = Self>
+    + Mul<f32, Output = Self>
+    + MulAssign
+    + MulAssign<f32>
+    + Div<Output = Self>
+    + Div<f32, Output = Self>
+    + DivAssign
+    + DivAssign<f32>
+    + Neg<Output = Self>
+    + Sized
+    + Copy
+    + Clone
+    + Default
+    + PartialEq
+{
+    const ELEMENTS: usize;
+    const ZERO: Self;
+    fn uniform(a: f32) -> Self;
+    fn normalise(&self) -> Self;
+    fn magnitude(&self) -> f32;
+    fn magnitude_sq(&self) -> f32;
+    fn dot(&self, rhs: Self) -> f32;
+    fn sqrt(&self) -> Self;
+    fn abs(&self) -> Self;
+    fn recip(&self) -> Self;
+    fn lerp(&self, rhs: Self, t: f32) -> Self;
+}
+
 macro_rules! count_items {
     ($name:ident) => { 1 };
     ($first:ident, $($rest:ident),*) => {
@@ -27,6 +70,8 @@ macro_rules! impl_core_vec {
     ( $name: ident { $($field: ident),+ } ) => {
 
         impl $name {
+            pub const ELEMENTS: usize = count_items!( $($field),+ );
+
             pub const ZERO: Self = Self {
                 $($field: 0.0),+
             };
@@ -107,19 +152,61 @@ macro_rules! impl_core_vec {
                 }
             }
 
-            pub fn as_array(&self) -> &[f32; count_items!( $($field),+ )] {
+            pub fn as_array(&self) -> &[f32; Self::ELEMENTS] {
                 unsafe {
-                    core::mem::transmute::<_, &[f32; count_items!( $($field),+ )]>(self)
+                    core::mem::transmute::<_, &[f32; Self::ELEMENTS]>(self)
                 }
             }
 
-            pub fn as_mut_array(&mut self) -> &mut [f32; count_items!( $($field),+ )] {
+            pub fn as_mut_array(&mut self) -> &mut [f32; Self::ELEMENTS] {
                 unsafe {
-                    core::mem::transmute::<_, &mut [f32; count_items!( $($field),+ )]>(self)
+                    core::mem::transmute::<_, &mut [f32; Self::ELEMENTS]>(self)
                 }
             }
 
         }
+
+        impl Vector for $name {
+            const ELEMENTS: usize = Self::ELEMENTS;
+            const ZERO: Self = Self::ZERO;
+
+            fn uniform(a: f32) -> Self {
+                Self::uniform(a)
+            }
+
+            fn normalise(&self) -> Self {
+                self.normalise()
+            }
+
+            fn magnitude(&self) -> f32 {
+                self.magnitude()
+            }
+
+            fn magnitude_sq(&self) -> f32 {
+                self.magnitude_sq()
+            }
+
+            fn dot(&self, rhs: Self) -> f32 {
+                self.dot(rhs)
+            }
+
+            fn sqrt(&self) -> Self {
+                self.sqrt()
+            }
+
+            fn abs(&self) -> Self {
+                self.abs()
+            }
+
+            fn recip(&self) -> Self {
+                self.recip()
+            }
+
+            fn lerp(&self, rhs: Self, t: f32) -> Self {
+                self.lerp(rhs, t)
+            }
+        }
+
 
         impl std::ops::Index<usize> for $name {
             type Output = f32;
@@ -263,7 +350,6 @@ macro_rules! impl_core_vec {
             }
         }
 
-
         impl std::ops::Neg for $name {
             type Output = Self;
 
@@ -273,6 +359,13 @@ macro_rules! impl_core_vec {
                 }
             }
         }
+
+        impl From<[f32; Self::ELEMENTS]> for $name {
+            fn from(array: [f32; Self::ELEMENTS]) -> Self {
+                unsafe { core::mem::transmute(array) }
+            }
+        }
+
 
         #[cfg(feature = "bytemuck")]
         unsafe impl bytemuck::Zeroable for $name {}

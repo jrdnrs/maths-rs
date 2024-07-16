@@ -1,23 +1,42 @@
-use crate::linear::Vec2f;
+use crate::linear::{Vec2f, Vec3f, Vector};
 
-use super::{aabb::AABB, Polygon, Shape2D};
+use super::{aabb::AABB, poly::Poly, shape::Shape};
 
+#[repr(C)]
 #[derive(Debug, Clone, Copy)]
-pub struct Segment {
-    pub a: Vec2f,
-    pub b: Vec2f,
+pub struct Segment<T: Vector> {
+    pub a: T,
+    pub b: T,
 }
 
-impl Segment {
+impl<T: Vector> Segment<T> {
     pub const ZERO: Self = Self {
-        a: Vec2f::ZERO,
-        b: Vec2f::ZERO,
+        a: T::ZERO,
+        b: T::ZERO,
     };
 
-    pub fn new(a: Vec2f, b: Vec2f) -> Self {
+    pub fn new(a: T, b: T) -> Self {
         Self { a, b }
     }
 
+    pub fn length_sq(&self) -> f32 {
+        (self.b - self.a).magnitude_sq()
+    }
+
+    pub fn length(&self) -> f32 {
+        (self.b - self.a).magnitude()
+    }
+
+    pub fn direction(&self) -> T {
+        (self.b - self.a).normalise()
+    }
+}
+
+/*
+    2D
+*/
+
+impl Segment<Vec2f> {
     /// Effectively returns double the signed area (parallelogram) of the triangle formed by the
     /// segment and the point. The sign of the result indicates the side of the segment the point
     /// is on (winding order).
@@ -32,7 +51,7 @@ impl Segment {
     }
 
     /// Returns the intersection point of two segments, if they intersect.
-    pub fn intersection(&self, other: &Segment) -> Option<Vec2f> {
+    pub fn intersection(&self, other: &Segment<Vec2f>) -> Option<Vec2f> {
         let edge_1 = self.b - self.a;
         let edge_2 = other.b - other.a;
 
@@ -56,7 +75,7 @@ impl Segment {
     }
 
     /// Returns whether two segments intersect.
-    pub fn intersects(&self, other: &Segment) -> bool {
+    pub fn intersects(&self, other: &Segment<Vec2f>) -> bool {
         let edge_1 = self.b - self.a;
         let edge_2 = other.b - other.a;
 
@@ -77,7 +96,7 @@ impl Segment {
     }
 
     /// Returns whether the segment overlaps with the area of an axis-aligned bounding box.
-    pub fn overlaps_bounds(&self, bounds: &AABB) -> bool {
+    pub fn overlaps_bounds(&self, bounds: &AABB<Vec2f>) -> bool {
         // If either point is inside the bounds, then it intersects or is inside completely
         if bounds.contains_point(self.a) || bounds.contains_point(self.b) {
             return true;
@@ -108,7 +127,7 @@ impl Segment {
     }
 
     /// Returns whether the segment overlaps with the area of a polygon.
-    pub fn overlaps_polygon(&self, polygon: &Polygon) -> bool {
+    pub fn overlaps_polygon(&self, polygon: &Poly<Vec2f>) -> bool {
         // If both points are outside the bounds on the same side, then the segment cannot intersect.
         // This acts as an early out for the more expensive checks (not sure of the performance gain though)
         let bounds = polygon.extents();
@@ -140,7 +159,7 @@ impl Segment {
     }
 
     /// Clips a segment to an axis-aligned bounding box
-    pub fn clip_bounds(&self, bounds: &AABB) -> Segment {
+    pub fn clip_bounds(&self, bounds: &AABB<Vec2f>) -> Segment<Vec2f> {
         let mut points = [self.a, self.b];
 
         // If the segment is entirely to one side of the bounds, it cannot intersect, so we
@@ -231,25 +250,13 @@ impl Segment {
         return self.point_distance_sq(point).sqrt();
     }
 
-    pub fn length_sq(&self) -> f32 {
-        (self.b - self.a).magnitude_sq()
-    }
-
-    pub fn length(&self) -> f32 {
-        (self.b - self.a).magnitude()
-    }
-
-    pub fn direction(&self) -> Vec2f {
-        (self.b - self.a).normalise()
-    }
-
     pub fn normal(&self) -> Vec2f {
         let dir = self.direction();
         return Vec2f::new(-dir.y, dir.x);
     }
 }
 
-impl Shape2D for Segment {
+impl Shape<Vec2f> for Segment<Vec2f> {
     fn contains_point(&self, point: Vec2f) -> bool {
         let ab = self.b - self.a;
         let ap = point - self.a;
@@ -259,11 +266,11 @@ impl Shape2D for Segment {
         return t >= 0.0 && t <= 1.0;
     }
 
-    fn intersects_ray(&self, ray: &Segment) -> bool {
+    fn intersects_ray(&self, ray: &Segment<Vec2f>) -> bool {
         self.intersects(ray)
     }
 
-    fn extents(&self) -> AABB {
+    fn extents(&self) -> AABB<Vec2f> {
         let min_x = self.a.x.min(self.b.x);
         let min_y = self.a.y.min(self.b.y);
 
@@ -273,8 +280,12 @@ impl Shape2D for Segment {
         return AABB::new(Vec2f::new(min_x, min_y), Vec2f::new(max_x, max_y));
     }
 
-    fn area(&self) -> f32 {
+    fn volume(&self) -> f32 {
         return 0.0;
+    }
+
+    fn furthest_point(&self, direction: Vec2f) -> Vec2f {
+        todo!()
     }
 
     fn centre(&self) -> Vec2f {
@@ -291,12 +302,77 @@ impl Shape2D for Segment {
         self.b *= scale;
     }
 
-    fn rotate(&mut self, sin: f32, cos: f32) {
+    fn rotate(&mut self, rotation: Vec2f) {
+        let (sin, cos) = (rotation.x, rotation.y);
         self.a = self.a.rotate(sin, cos);
         self.b = self.b.rotate(sin, cos);
     }
 
     fn points(&self) -> &[Vec2f] {
+        return unsafe { std::slice::from_raw_parts(&self.a as *const _, 2) };
+    }
+}
+
+/*
+    3D
+*/
+
+impl Shape<Vec3f> for Segment<Vec3f> {
+    fn contains_point(&self, point: Vec3f) -> bool {
+        let ab = self.b - self.a;
+        let ap = point - self.a;
+
+        let t = ap.dot(ab) / ab.dot(ab);
+
+        return t >= 0.0 && t <= 1.0;
+    }
+
+    fn intersects_ray(&self, ray: &Segment<Vec3f>) -> bool {
+        todo!()
+    }
+
+    fn extents(&self) -> AABB<Vec3f> {
+        let min_x = self.a.x.min(self.b.x);
+        let min_y = self.a.y.min(self.b.y);
+        let min_z = self.a.z.min(self.b.z);
+
+        let max_x = self.a.x.max(self.b.x);
+        let max_y = self.a.y.max(self.b.y);
+        let max_z = self.a.z.max(self.b.z);
+
+        return AABB::new(
+            Vec3f::new(min_x, min_y, min_z),
+            Vec3f::new(max_x, max_y, max_z),
+        );
+    }
+
+    fn volume(&self) -> f32 {
+        return 0.0;
+    }
+
+    fn furthest_point(&self, direction: Vec3f) -> Vec3f {
+        todo!()
+    }
+
+    fn centre(&self) -> Vec3f {
+        return (self.a + self.b) * 0.5;
+    }
+
+    fn translate(&mut self, translation: Vec3f) {
+        self.a += translation;
+        self.b += translation;
+    }
+
+    fn scale(&mut self, scale: Vec3f) {
+        self.a *= scale;
+        self.b *= scale;
+    }
+
+    fn rotate(&mut self, rotation: Vec3f) {
+        todo!()
+    }
+
+    fn points(&self) -> &[Vec3f] {
         return unsafe { std::slice::from_raw_parts(&self.a as *const _, 2) };
     }
 }
@@ -463,7 +539,7 @@ mod tests {
 
     #[test]
     fn overlaps_polygon_test() {
-        let polygon = Polygon::from_vertices(vec![
+        let polygon = Poly::from_vertices(vec![
             Vec2f::new(1.0, 3.0),
             Vec2f::new(3.0, 3.0),
             Vec2f::new(4.0, 1.0),

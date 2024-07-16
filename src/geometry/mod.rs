@@ -1,14 +1,18 @@
 mod aabb;
+mod capsule;
 mod circle;
-mod polygon;
+pub mod collision;
+mod poly;
 mod segment;
-mod triangle;
 mod shape;
-mod sat;
+mod sphere;
+mod triangle;
 
 pub use aabb::AABB;
+pub use capsule::Capsule;
 pub use circle::Circle;
-pub use polygon::Polygon;
+pub use poly::Poly;
 pub use segment::Segment;
+pub use shape::Shape;
+pub use sphere::Sphere;
 pub use triangle::Triangle;
-pub use shape::Shape2D;

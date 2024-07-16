@@ -1,31 +1,34 @@
-use crate::linear::{Vec2f, Vec3f};
+use crate::linear::{Vec2f, Vec3f, Vector};
 
-use super::{aabb::AABB, segment::Segment, shape::Shape2D};
+use super::{aabb::AABB, segment::Segment, shape::Shape};
 
-#[derive(Debug, Clone, Copy)]
-pub struct Triangle {
-    pub a: Vec2f,
-    pub b: Vec2f,
-    pub c: Vec2f,
+#[repr(C)]
+#[derive(Debug, Default, Clone, Copy)]
+pub struct Triangle<T: Vector> {
+    pub a: T,
+    pub b: T,
+    pub c: T,
 }
 
-impl Triangle {
-    pub fn new(a: Vec2f, b: Vec2f, c: Vec2f) -> Self {
+impl<T: Vector> Triangle<T> {
+    pub fn new(a: T, b: T, c: T) -> Self {
         Self { a, b, c }
     }
+}
 
+impl Triangle<Vec2f> {
     /// Returns barycentric coordinates (U, V, W) of the point with respect to this triangle.
     ///
     /// This makes use of the provided `inv_para_area` that represents the inverse of the
     /// parallelogram area of the triangle, thus avoiding a division.
     pub fn barycentric_from_inv_area(&self, point: Vec2f, inv_para_area: f32) -> Vec3f {
-        let bcp = Segment::new(self.b, self.c).edge_side(point);
-        let acp = Segment::new(self.a, self.c).edge_side(point);
-        let abp = Segment::new(self.a, self.b).edge_side(point);
+        let bcp = Segment::new(self.c, self.b).edge_side(point);
+        let cap = Segment::new(self.a, self.c).edge_side(point);
+        // let abp = Segment::new(self.b, self.a).edge_side(point);
 
         let u = bcp * inv_para_area;
-        let v = acp * inv_para_area;
-        let w = abp * inv_para_area;
+        let v = cap * inv_para_area;
+        let w = 1.0 - u - v;
 
         return Vec3f::new(u, v, w);
     }
@@ -38,7 +41,7 @@ impl Triangle {
     }
 }
 
-impl Shape2D for Triangle {
+impl Shape<Vec2f> for Triangle<Vec2f> {
     fn contains_point(&self, point: Vec2f) -> bool {
         // pineda's method (same-side technique)
         let edge_1 = Segment::new(self.b, self.a).edge_side(point);
@@ -50,10 +53,10 @@ impl Shape2D for Triangle {
         let sign_2 = unsafe { core::mem::transmute::<f32, u32>(edge_2) & 0x8000_0000 };
         let sign_3 = unsafe { core::mem::transmute::<f32, u32>(edge_3) & 0x8000_0000 };
 
-        return sign_1 == sign_2 && sign_2 == sign_3;
+        sign_1 == sign_2 && sign_2 == sign_3
     }
 
-    fn intersects_ray(&self, ray: &Segment) -> bool {
+    fn intersects_ray(&self, ray: &Segment<Vec2f>) -> bool {
         let edge_1 = Segment::new(self.b, self.a);
         if edge_1.intersects(ray) {
             return true;
@@ -65,22 +68,26 @@ impl Shape2D for Triangle {
         }
 
         let edge_3 = Segment::new(self.a, self.c);
-        return edge_3.intersects(ray);
+        edge_3.intersects(ray)
     }
 
-    fn extents(&self) -> AABB {
+    fn extents(&self) -> AABB<Vec2f> {
         let min_x = self.a.x.min(self.b.x).min(self.c.x);
         let min_y = self.a.y.min(self.b.y).min(self.c.y);
 
         let max_x = self.a.x.max(self.b.x).max(self.c.x);
         let max_y = self.a.y.max(self.b.y).max(self.c.y);
 
-        return AABB::new(Vec2f::new(min_x, min_y), Vec2f::new(max_x, max_y));
+        AABB::new(Vec2f::new(min_x, min_y), Vec2f::new(max_x, max_y))
     }
 
-    fn area(&self) -> f32 {
+    fn furthest_point(&self, direction: Vec2f) -> Vec2f {
+        todo!()
+    }
+
+    fn volume(&self) -> f32 {
         let parallelogram_area = (self.b - self.a).cross(self.c - self.a).abs();
-        return parallelogram_area * 0.5;
+        parallelogram_area * 0.5
     }
 
     fn centre(&self) -> Vec2f {
@@ -88,7 +95,7 @@ impl Shape2D for Triangle {
         let x = (self.a.x + self.b.x + self.c.x) * THIRD;
         let y = (self.a.y + self.b.y + self.c.y) * THIRD;
 
-        return Vec2f::new(x, y);
+        Vec2f::new(x, y)
     }
 
     fn translate(&mut self, translation: Vec2f) {
@@ -103,14 +110,27 @@ impl Shape2D for Triangle {
         self.c *= scale;
     }
 
-    fn rotate(&mut self, sin: f32, cos: f32) {
+    fn rotate(&mut self, rotation: Vec2f) {
+        let (sin, cos) = (rotation.x, rotation.y);
         self.a = self.a.rotate(sin, cos);
         self.b = self.b.rotate(sin, cos);
         self.c = self.c.rotate(sin, cos);
     }
 
     fn points(&self) -> &[Vec2f] {
-        return unsafe { std::slice::from_raw_parts(&self.a as *const _, 3) };
+        unsafe { std::slice::from_raw_parts(&self.a as *const _, 3) }
+    }
+}
+
+impl From<[Vec2f; 3]> for Triangle<Vec2f> {
+    fn from(points: [Vec2f; 3]) -> Self {
+        unsafe { core::mem::transmute(points) }
+    }
+}
+
+impl From<[Vec3f; 3]> for Triangle<Vec3f> {
+    fn from(points: [Vec3f; 3]) -> Self {
+        unsafe { core::mem::transmute(points) }
     }
 }
 
@@ -131,6 +151,14 @@ mod tests {
 
         // outside
         assert!(!triangle.contains_point(Vec2f::new(1.0, 1.0)));
+
+        let triangle = Triangle::new(
+            Vec2f::new(340.0, 220.0),
+            Vec2f::new(360.0, 180.0),
+            Vec2f::new(380.0, 220.0),
+        );
+
+        assert!(!triangle.contains_point(Vec2f::new(350.5, 160.5)));
     }
 
     #[test]
@@ -156,7 +184,7 @@ mod tests {
             Vec2f::new(0.0, 1.0),
         );
 
-        assert_eq!(triangle.area(), 0.5);
+        assert_eq!(triangle.volume(), 0.5);
 
         let triangle = Triangle::new(
             Vec2f::new(1.0, 0.0),
@@ -164,6 +192,6 @@ mod tests {
             Vec2f::new(0.0, 4.0),
         );
 
-        assert_eq!(triangle.area(), 3.5);
+        assert_eq!(triangle.volume(), 3.5);
     }
 }

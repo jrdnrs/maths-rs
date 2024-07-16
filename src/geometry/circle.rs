@@ -1,49 +1,54 @@
 use std::f32::consts::PI;
 
-use crate::linear::Vec2f;
+use crate::linear::{Vec2f, Vector};
 
-use super::{shape::Shape2D, Segment, AABB};
+use super::{aabb::AABB, segment::Segment, shape::Shape};
 
-pub struct Circle {
-    pub centre: Vec2f,
+
+pub struct Circle<T: Vector> {
+    pub centre: T,
     pub radius: f32,
 }
 
-impl Circle {
-    pub fn new(centre: Vec2f, radius: f32) -> Self {
+impl<T: Vector> Circle<T> {
+    pub fn new(centre: T, radius: f32) -> Self {
         Self { centre, radius }
     }
 
-    pub fn intersects(&self, other: &Circle) -> bool {
+    pub fn intersects(&self, other: &Circle<T>) -> bool {
         return (self.centre - other.centre).magnitude_sq()
             <= (self.radius + other.radius) * (self.radius + other.radius);
     }
 
-    pub fn contains(&self, other: &Circle) -> bool {
+    pub fn contains(&self, other: &Circle<T>) -> bool {
         return (self.radius * self.radius)
             >= (self.centre - other.centre).magnitude_sq() + (other.radius * other.radius);
     }
 }
 
-impl Shape2D for Circle {
+impl Shape<Vec2f> for Circle<Vec2f> {
     fn contains_point(&self, point: Vec2f) -> bool {
         return (point - self.centre).magnitude_sq() <= self.radius * self.radius;
     }
 
-    fn intersects_ray(&self, ray: &Segment) -> bool {
+    fn intersects_ray(&self, ray: &Segment<Vec2f>) -> bool {
         let dist = ray.point_distance_sq(self.centre);
         return dist <= self.radius * self.radius;
     }
 
-    fn extents(&self) -> AABB {
+    fn extents(&self) -> AABB<Vec2f> {
         return AABB::new(
             self.centre - Vec2f::uniform(self.radius),
             self.centre + Vec2f::uniform(self.radius),
         );
     }
 
-    fn area(&self) -> f32 {
+    fn volume(&self) -> f32 {
         return PI * self.radius * self.radius;
+    }
+
+    fn furthest_point(&self, direction: Vec2f) -> Vec2f {
+        todo!()
     }
 
     fn centre(&self) -> Vec2f {
@@ -59,7 +64,8 @@ impl Shape2D for Circle {
         self.radius *= scale.x.max(scale.y);
     }
 
-    fn rotate(&mut self, sin: f32, cos: f32) {
+    fn rotate(&mut self, rotation: Vec2f) {
+        let (sin, cos) = (rotation.x, rotation.y);
         self.centre = self.centre.rotate(sin, cos);
     }
 
