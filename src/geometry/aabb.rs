@@ -37,6 +37,15 @@ impl AABB<Vec2f> {
             && self.min.y <= other.min.y
             && self.max.y >= other.max.y
     }
+
+    pub fn points(&self) -> [Vec2f; 4] {
+        [
+            Vec2f::new(self.min.x, self.min.y),
+            Vec2f::new(self.max.x, self.min.y),
+            Vec2f::new(self.max.x, self.max.y),
+            Vec2f::new(self.min.x, self.max.y),
+        ]
+    }
 }
 
 impl Shape<Vec2f> for AABB<Vec2f> {
@@ -135,6 +144,19 @@ impl AABB<Vec3f> {
             && self.max.y >= other.max.y
             && self.min.z <= other.min.z
             && self.max.z >= other.max.z
+    }
+
+    pub fn points(&self) -> [Vec3f; 8] {
+        [
+            Vec3f::new(self.min.x, self.min.y, self.min.z),
+            Vec3f::new(self.max.x, self.min.y, self.min.z),
+            Vec3f::new(self.max.x, self.max.y, self.min.z),
+            Vec3f::new(self.min.x, self.max.y, self.min.z),
+            Vec3f::new(self.min.x, self.min.y, self.max.z),
+            Vec3f::new(self.max.x, self.min.y, self.max.z),
+            Vec3f::new(self.max.x, self.max.y, self.max.z),
+            Vec3f::new(self.min.x, self.max.y, self.max.z),
+        ]
     }
 }
 
