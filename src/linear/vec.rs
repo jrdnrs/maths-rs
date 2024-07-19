@@ -38,6 +38,8 @@ pub trait Vector:
     fn sqrt(&self) -> Self;
     fn abs(&self) -> Self;
     fn recip(&self) -> Self;
+    fn min(&self, rhs: &Self) -> Self;
+    fn max(&self, rhs: &Self) -> Self;
     fn lerp(&self, rhs: Self, t: f32) -> Self;
 }
 
@@ -146,6 +148,18 @@ macro_rules! impl_core_vec {
                 }
             }
 
+            pub fn min(&self, rhs: &Self) -> Self {
+                Self {
+                    $($field: self.$field.min(rhs.$field)),+
+                }
+            }
+
+            pub fn max(&self, rhs: &Self) -> Self {
+                Self {
+                    $($field: self.$field.max(rhs.$field)),+
+                }
+            }
+
             pub fn lerp(&self, rhs: Self, t: f32) -> Self {
                 Self {
                     $($field: self.$field + (rhs.$field - self.$field) * t),+
@@ -200,6 +214,14 @@ macro_rules! impl_core_vec {
 
             fn recip(&self) -> Self {
                 self.recip()
+            }
+
+            fn min(&self, rhs: &Self) -> Self {
+                self.min(rhs)
+            }
+
+            fn max(&self, rhs: &Self) -> Self {
+                self.max(rhs)
             }
 
             fn lerp(&self, rhs: Self, t: f32) -> Self {
