@@ -37,6 +37,11 @@ pub trait Matrix:
     fn sqrt(&self) -> Self;
     fn abs(&self) -> Self;
     fn recip(&self) -> Self;
+    fn round(&self) -> Self;
+    fn trunc(&self) -> Self;
+    fn fract(&self) -> Self;
+    fn floor(&self) -> Self;
+    fn ceil(&self) -> Self;
 }
 
 macro_rules! assert_near_eq {
@@ -163,6 +168,56 @@ macro_rules! impl_core_mat {
                 matrix
             }
 
+            pub fn round(&self) -> Self {
+                let mut matrix = Self::ZERO;
+
+                for i in 0..(Self::ELEMENTS) {
+                    matrix.array[i] = self.array[i].round();
+                }
+
+                matrix
+            }
+
+            pub fn trunc(&self) -> Self {
+                let mut matrix = Self::ZERO;
+
+                for i in 0..(Self::ELEMENTS) {
+                    matrix.array[i] = self.array[i].trunc();
+                }
+
+                matrix
+            }
+
+            pub fn fract(&self) -> Self {
+                let mut matrix = Self::ZERO;
+
+                for i in 0..(Self::ELEMENTS) {
+                    matrix.array[i] = self.array[i].fract();
+                }
+
+                matrix
+            }
+
+            pub fn floor(&self) -> Self {
+                let mut matrix = Self::ZERO;
+
+                for i in 0..(Self::ELEMENTS) {
+                    matrix.array[i] = self.array[i].floor();
+                }
+
+                matrix
+            }
+
+            pub fn ceil(&self) -> Self {
+                let mut matrix = Self::ZERO;
+
+                for i in 0..(Self::ELEMENTS) {
+                    matrix.array[i] = self.array[i].ceil();
+                }
+
+                matrix
+            }
+
             pub fn as_array(&self) -> &[f32; Self::ELEMENTS] {
                 &self.array
             }
@@ -205,6 +260,26 @@ macro_rules! impl_core_mat {
 
             fn recip(&self) -> Self {
                 self.recip()
+            }
+            
+            fn round(&self) -> Self {
+                self.round()
+            }
+
+            fn trunc(&self) -> Self {
+                self.trunc()
+            }
+
+            fn fract(&self) -> Self {
+                self.fract()
+            }
+
+            fn floor(&self) -> Self {
+                self.floor()
+            }
+
+            fn ceil(&self) -> Self {
+                self.ceil()
             }
         }
 

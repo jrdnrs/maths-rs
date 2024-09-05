@@ -38,6 +38,11 @@ pub trait Vector:
     fn sqrt(&self) -> Self;
     fn abs(&self) -> Self;
     fn recip(&self) -> Self;
+    fn round(&self) -> Self;
+    fn trunc(&self) -> Self;
+    fn fract(&self) -> Self;
+    fn floor(&self) -> Self;
+    fn ceil(&self) -> Self;
     fn min(&self, rhs: &Self) -> Self;
     fn max(&self, rhs: &Self) -> Self;
     fn lerp(&self, rhs: Self, t: f32) -> Self;
@@ -148,6 +153,36 @@ macro_rules! impl_core_vec {
                 }
             }
 
+            pub fn round(&self) -> Self {
+                Self {
+                    $($field: self.$field.round()),+
+                }
+            }
+
+            pub fn trunc(&self) -> Self {
+                Self {
+                    $($field: self.$field.trunc()),+
+                }
+            }
+
+            pub fn fract(&self) -> Self {
+                Self {
+                    $($field: self.$field.fract()),+
+                }
+            }
+
+            pub fn floor(&self) -> Self {
+                Self {
+                    $($field: self.$field.floor()),+
+                }
+            }
+
+            pub fn ceil(&self) -> Self {
+                Self {
+                    $($field: self.$field.ceil()),+
+                }
+            }
+
             pub fn min(&self, rhs: &Self) -> Self {
                 Self {
                     $($field: self.$field.min(rhs.$field)),+
@@ -214,6 +249,26 @@ macro_rules! impl_core_vec {
 
             fn recip(&self) -> Self {
                 self.recip()
+            }
+
+            fn round(&self) -> Self {
+                self.round()
+            }
+
+            fn trunc(&self) -> Self {
+                self.trunc()
+            }
+
+            fn fract(&self) -> Self {
+                self.fract()
+            }
+
+            fn floor(&self) -> Self {
+                self.floor()
+            }
+
+            fn ceil(&self) -> Self {
+                self.ceil()
             }
 
             fn min(&self, rhs: &Self) -> Self {
