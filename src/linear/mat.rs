@@ -697,7 +697,7 @@ impl Mat4f {
         let mut matrix = Mat4f::ZERO;
         
         matrix[0][0] = f / a;
-        matrix[1][1] = -f;
+        matrix[1][1] = f;
         matrix[2][2] = g;
         matrix[3][2] = h;
         matrix[2][3] = 1.0;
@@ -718,13 +718,13 @@ impl Mat4f {
 
         // transformed Z, Zt = (g * Z + h) / Z
         // division by Z occurs in graphics pipeline
-        let g =      -(far + near) * inv_fn;
-        let h = (2.0 * far * near) * inv_fn;
+        let g =        (far + near) * inv_fn;
+        let h = -(2.0 * far * near) * inv_fn;
 
         let mut matrix = Mat4f::ZERO;
         
         matrix[0][0] = f / a;
-        matrix[1][1] = -f;
+        matrix[1][1] = f;
         matrix[2][2] = g;
         matrix[3][2] = h;
         matrix[2][3] = 1.0;
